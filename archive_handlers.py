@@ -33,6 +33,32 @@ class SevenZipHandler(ArchiveHandler):
     @property
     def supports_deletion(self):
         return True
+    
+    def rename_file(self, filename, old_name, new_name):
+        temp_filename = filename + '.temp'
+        with py7zr.SevenZipFile(filename, mode='r') as archive_read:
+            with py7zr.SevenZipFile(temp_filename, mode='w') as archive_write:
+                for file_info in archive_read.list():
+                    if file_info.filename == old_name:
+                        archive_write.writestr({new_name: archive_read.read([old_name])[old_name]})
+                    else:
+                        archive_write.writestr({file_info.filename: archive_read.read([file_info.filename])[file_info.filename]})
+        os.remove(filename)
+        os.rename(temp_filename, filename)
+
+    @property
+    def supports_renaming(self):
+        return True
+    
+    def encrypt_archive(self, filename, password):
+        return
+    
+    def encrypt_files(self, filename, files_to_encrypt, passwords):
+        return
+
+    @property
+    def supports_encryption(self):
+        return False
 
 class ZipHandler(ArchiveHandler):
     def get_file_list(self, filename):
@@ -58,7 +84,59 @@ class ZipHandler(ArchiveHandler):
     @property
     def supports_deletion(self):
         return True
+    
+    def rename_file(self, filename, old_name, new_name):
+        temp_filename = filename + '.temp'
+        with zipfile.ZipFile(filename, 'r') as archive_read:
+            with zipfile.ZipFile(temp_filename, 'w') as archive_write:
+                for item in archive_read.infolist():
+                    if item.filename == old_name:
+                        data = archive_read.read(item.filename)
+                        archive_write.writestr(new_name, data)
+                    else:
+                        archive_write.writestr(item, archive_read.read(item.filename))
+        os.remove(filename)
+        os.rename(temp_filename, filename)
 
+    @property
+    def supports_renaming(self):
+        return True
+    
+    def encrypt_archive(self, filename, password):
+        temp_filename = filename + '.temp'
+        with zipfile.ZipFile(filename, 'r') as zin:
+            with zipfile.ZipFile(temp_filename, 'w') as zout:
+                zout.comment = zin.comment
+                for item in zin.infolist():
+                    data = zin.read(item.filename)
+                    zout.writestr(item, data, zipfile.ZIP_DEFLATED)
+        os.remove(filename)
+        os.rename(temp_filename, filename)
+        
+        with zipfile.ZipFile(filename, 'w') as zf:
+            zf.setpassword(password.encode())
+            for item in zf.infolist():
+                zf.writestr(item, zf.read(item.filename), zipfile.ZIP_DEFLATED)
+
+    def encrypt_files(self, filename, files_to_encrypt, passwords):
+        temp_filename = filename + '.temp'
+        with zipfile.ZipFile(filename, 'r') as zin:
+            with zipfile.ZipFile(temp_filename, 'w') as zout:
+                zout.comment = zin.comment
+                for item in zin.infolist():
+                    if item.filename in files_to_encrypt:
+                        zout.writestr(item, zin.read(item.filename), 
+                                      zipfile.ZIP_DEFLATED, 
+                                      pwd=passwords[item.filename].encode())
+                    else:
+                        zout.writestr(item, zin.read(item.filename))
+        os.remove(filename)
+        os.rename(temp_filename, filename)
+
+    @property
+    def supports_encryption(self):
+        return True
+    
 class RarHandler(ArchiveHandler):
     def get_file_list(self, filename):
         with rarfile.RarFile(filename, 'r') as archive:
@@ -75,6 +153,23 @@ class RarHandler(ArchiveHandler):
 
     @property
     def supports_deletion(self):
+        return False
+    
+    def rename_file(self, filename, old_name, new_name):
+        return
+    
+    @property
+    def supports_renaming(self):
+        return False
+
+    def encrypt_archive(self, filename, password):
+        return
+    
+    def encrypt_files(self, filename, files_to_encrypt, passwords):
+        return
+
+    @property
+    def supports_encryption(self):
         return False
 
 class TarHandler(ArchiveHandler):
@@ -95,6 +190,23 @@ class TarHandler(ArchiveHandler):
     def supports_deletion(self):
         return False
 
+    def rename_file(self, filename, old_name, new_name):
+        return
+    
+    @property
+    def supports_renaming(self):
+        return False
+
+    def encrypt_archive(self, filename, password):
+        return
+    
+    def encrypt_files(self, filename, files_to_encrypt, passwords):
+        return
+
+    @property
+    def supports_encryption(self):
+        return False
+
 class GzipHandler(ArchiveHandler):
     def get_file_list(self, filename):
         return [os.path.basename(filename[:-3])]  # Remove .gz extension
@@ -112,6 +224,23 @@ class GzipHandler(ArchiveHandler):
     def supports_deletion(self):
         return False
 
+    def rename_file(self, filename, old_name, new_name):
+        return
+    
+    @property
+    def supports_renaming(self):
+        return False
+
+    def encrypt_archive(self, filename, password):
+        return
+    
+    def encrypt_files(self, filename, files_to_encrypt, passwords):
+        return
+
+    @property
+    def supports_encryption(self):
+        return False
+    
 class Bzip2Handler(ArchiveHandler):
     def get_file_list(self, filename):
         return [os.path.basename(filename[:-4])]  # Remove .bz2 extension
@@ -129,6 +258,23 @@ class Bzip2Handler(ArchiveHandler):
     def supports_deletion(self):
         return False
 
+    def rename_file(self, filename, old_name, new_name):
+        return
+    
+    @property
+    def supports_renaming(self):
+        return False
+
+    def encrypt_archive(self, filename, password):
+        return
+    
+    def encrypt_files(self, filename, files_to_encrypt, passwords):
+        return
+
+    @property
+    def supports_encryption(self):
+        return False
+    
 # Dictionary to map file extensions to their respective handlers
 ARCHIVE_HANDLERS = {
     '7z': SevenZipHandler(),

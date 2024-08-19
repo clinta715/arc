@@ -2,6 +2,9 @@
 import tkinter as tk
 from tkinter import ttk
 
+# Make sure this import is correct
+# from .archive_viewer import ArchiveViewer
+
 def set_dark_theme(self):
     self.style = ttk.Style(self)
     self.style.theme_use('clam')
@@ -40,10 +43,22 @@ def create_widgets(self):
 
     self.tree.bind("<ButtonRelease-1>", self.on_click)
 
-    self.extract_button = ttk.Button(self, text="Extract Files", command=self.extract_files)
-    self.extract_button.pack(pady=10)
-    self.delete_button = ttk.Button(self, text="Delete Files", command=self.delete_files)
-    self.delete_button.pack(pady=10)
+    # Create a frame to hold the buttons
+    button_frame = ttk.Frame(self)
+    button_frame.pack(pady=10)
+
+    # Place the Extract, Delete, Rename, and Encrypt buttons side by side
+    self.extract_button = ttk.Button(button_frame, text="Extract Files", command=self.extract_files)
+    self.extract_button.pack(side=tk.LEFT, padx=5)
+    
+    self.delete_button = ttk.Button(button_frame, text="Delete Files", command=self.delete_files)
+    self.delete_button.pack(side=tk.LEFT, padx=5)
+
+    self.rename_button = ttk.Button(button_frame, text="Rename File", command=self.rename_file)
+    self.rename_button.pack(side=tk.LEFT, padx=5)
+
+    self.encrypt_button = ttk.Button(button_frame, text="Encrypt", command=self.encrypt_files)
+    self.encrypt_button.pack(side=tk.LEFT, padx=5)
 
     self.status_var = tk.StringVar()
     self.status_bar = ttk.Label(self, textvariable=self.status_var, relief=tk.SUNKEN, anchor=tk.W, 

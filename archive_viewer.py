@@ -1,6 +1,6 @@
 # archive_viewer.py
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import os
 import threading
 
@@ -75,6 +75,53 @@ class ArchiveViewer(tk.Tk):
             try:
                 handler.delete_files(self.archive_filename, selected_files)
                 messagebox.showinfo("Success", f"Successfully deleted {len(selected_files)} file(s) from the archive.")
-                self.populate_tree(self.archive_filename)  # Refresh the file list
+                populate_tree(self, self.archive_filename)  # Refresh the file list
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete files: {str(e)}")
+
+    def rename_file(self):
+        if not self.archive_filename:
+            messagebox.showerror("Error", "No archive file selected.")
+            return
+
+        selected_items = self.tree.selection()
+        if not selected_items:
+            messagebox.showerror("Error", "No file selected for renaming.")
+            return
+
+        handler = get_archive_handler(self.archive_filename)
+        if not handler:
+            messagebox.showerror("Error", f"Unsupported file format: {os.path.splitext(self.archive_filename)[1]}")
+            return
+
+        if not handler.supports_renaming:
+            messagebox.showerror("Error", "Renaming is not supported for this archive format.")
+            return
+
+        renamed_files = 0
+        skipped_files = 0
+
+        for item in selected_items:
+            old_name = self.tree.item(item)['values'][1]
+            new_name = simpledialog.askstring("Rename File", f"Enter new name for {old_name}:", parent=self)
+
+            if new_name:
+                if new_name == old_name:
+                    skipped_files += 1
+                    continue
+
+                try:
+                    handler.rename_file(self.archive_filename, old_name, new_name)
+                    renamed_files += 1
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to rename {old_name}: {str(e)}")
+                    skipped_files += 1
+            else:
+                skipped_files += 1
+
+        if renamed_files > 0:
+            messagebox.showinfo("Success", f"Successfully renamed {renamed_files} file(s).")
+            populate_tree(self, self.archive_filename)  # Refresh the file list
+
+        if skipped_files > 0:
+            messagebox.showinfo("Information", f"{skipped_files} file(s) were not renamed.")
