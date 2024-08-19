@@ -125,3 +125,105 @@ class ArchiveViewer(tk.Tk):
 
         if skipped_files > 0:
             messagebox.showinfo("Information", f"{skipped_files} file(s) were not renamed.")
+
+    def encrypt_files(self):
+        if not self.archive_filename:
+            messagebox.showerror("Error", "No archive file selected.")
+            return
+
+        handler = get_archive_handler(self.archive_filename)
+        if not handler:
+            messagebox.showerror("Error", f"Unsupported file format: {os.path.splitext(self.archive_filename)[1]}")
+            return
+
+        if not handler.supports_encryption:
+            messagebox.showerror("Error", "Encryption is not supported for this archive format.")
+            return
+
+        selected_items = self.tree.selection()
+        if not selected_items:
+            # Encrypt entire archive
+            password = simpledialog.askstring("Encrypt Archive", "Enter master password for the archive:", show='*')
+            if password:
+                try:
+                    handler.encrypt_archive(self.archive_filename, password)
+                    messagebox.showinfo("Success", "Archive encrypted successfully.")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to encrypt archive: {str(e)}")
+        else:
+            # Encrypt selected files
+            files_to_encrypt = {}
+            for item in selected_items:
+                file_name = self.tree.item(item)['values'][1]
+                password = simpledialog.askstring("Encrypt File", f"Enter password for {file_name}:", show='*')
+                if password:
+                    files_to_encrypt[file_name] = password
+
+            if files_to_encrypt:
+                try:
+                    handler.encrypt_files(self.archive_filename, files_to_encrypt, files_to_encrypt)
+                    messagebox.showinfo("Success", f"Successfully encrypted {len(files_to_encrypt)} file(s).")
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to encrypt files: {str(e)}")
+
+        # Refresh the file list
+        populate_tree(self, self.archive_filename)
+    
+    def create_new_archive(self):
+        filetypes = [(f.upper() + " files", f"*.{f}") for f in self.supported_formats]
+        filetypes.append(("All files", "*.*"))
+        
+        new_archive_path = filedialog.asksaveasfilename(
+            title="Create New Archive",
+            filetypes=filetypes,
+            initialdir=self.last_extraction_path
+        )
+        
+        if new_archive_path:
+            _, extension = os.path.splitext(new_archive_path)
+            extension = extension[1:].lower()  # Remove the dot and convert to lowercase
+            
+            handler = get_archive_handler(new_archive_path)
+            if not handler:
+                messagebox.showerror("Error", f"Unsupported file format: {extension}")
+                return
+            
+            if not handler.supports_creation:
+                messagebox.showerror("Error", f"Creation of {extension} archives is not supported.")
+                return
+            
+            try:
+                handler.create_archive(new_archive_path)
+                messagebox.showinfo("Success", f"New {extension} archive created successfully.")
+                self.archive_filename = new_archive_path
+                populate_tree(self, new_archive_path)
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to create archive: {str(e)}")
+
+    def add_files(self):
+        if not self.archive_filename:
+            messagebox.showerror("Error", "No archive file selected. Please create or open an archive first.")
+            return
+
+        handler = get_archive_handler(self.archive_filename)
+        if not handler:
+            messagebox.showerror("Error", f"Unsupported file format: {os.path.splitext(self.archive_filename)[1]}")
+            return
+
+        if not handler.supports_adding:
+            messagebox.showerror("Error", "Adding files is not supported for this archive format.")
+            return
+
+        files_to_add = filedialog.askopenfilenames(
+            title="Select Files to Add",
+            initialdir=self.last_extraction_path
+        )
+
+        if files_to_add:
+            try:
+                handler.add_files(self.archive_filename, files_to_add)
+                messagebox.showinfo("Success", f"Successfully added {len(files_to_add)} file(s) to the archive.")
+                populate_tree(self, self.archive_filename)  # Refresh the file list
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to add files: {str(e)}")
+                

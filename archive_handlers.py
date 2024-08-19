@@ -60,6 +60,23 @@ class SevenZipHandler(ArchiveHandler):
     def supports_encryption(self):
         return False
 
+    def create_archive(self, filename):
+        with py7zr.SevenZipFile(filename, 'w') as _:
+            pass
+
+    def add_files(self, archive_filename, files_to_add):
+        with py7zr.SevenZipFile(archive_filename, 'a') as archive:
+            for file_path in files_to_add:
+                archive.write(file_path, os.path.basename(file_path))
+
+    @property
+    def supports_creation(self):
+        return True
+
+    @property
+    def supports_adding(self):
+        return True
+    
 class ZipHandler(ArchiveHandler):
     def get_file_list(self, filename):
         with zipfile.ZipFile(filename, 'r') as archive:
@@ -80,6 +97,23 @@ class ZipHandler(ArchiveHandler):
                         archive_write.writestr(item, archive_read.read(item.filename))
         os.remove(filename)
         os.rename(temp_filename, filename)
+
+    def create_archive(self, filename):
+        with zipfile.ZipFile(filename, 'w', zipfile.ZIP_DEFLATED) as _:
+            pass
+
+    def add_files(self, archive_filename, files_to_add):
+        with zipfile.ZipFile(archive_filename, 'a') as archive:
+            for file_path in files_to_add:
+                archive.write(file_path, os.path.basename(file_path))
+
+    @property
+    def supports_creation(self):
+        return True
+
+    @property
+    def supports_adding(self):
+        return True
 
     @property
     def supports_deletion(self):
@@ -172,6 +206,20 @@ class RarHandler(ArchiveHandler):
     def supports_encryption(self):
         return False
 
+    def create_archive(self, filename):
+        return
+    
+    def add_files(self, archive_filename, files_to_add):
+        return
+    
+    @property
+    def supports_creation(self):
+        return False
+
+    @property
+    def supports_adding(self):
+        return False
+    
 class TarHandler(ArchiveHandler):
     def get_file_list(self, filename):
         with tarfile.open(filename, 'r:*') as archive:
@@ -207,6 +255,21 @@ class TarHandler(ArchiveHandler):
     def supports_encryption(self):
         return False
 
+
+    def create_archive(self, filename):
+        return
+    
+    def add_files(self, archive_filename, files_to_add):
+        return
+    
+    @property
+    def supports_creation(self):
+        return False
+
+    @property
+    def supports_adding(self):
+        return False
+    
 class GzipHandler(ArchiveHandler):
     def get_file_list(self, filename):
         return [os.path.basename(filename[:-3])]  # Remove .gz extension
@@ -240,7 +303,21 @@ class GzipHandler(ArchiveHandler):
     @property
     def supports_encryption(self):
         return False
+
+    def create_archive(self, filename):
+        return
     
+    def add_files(self, archive_filename, files_to_add):
+        return
+    
+    @property
+    def supports_creation(self):
+        return False
+
+    @property
+    def supports_adding(self):
+        return False
+
 class Bzip2Handler(ArchiveHandler):
     def get_file_list(self, filename):
         return [os.path.basename(filename[:-4])]  # Remove .bz2 extension
@@ -274,7 +351,21 @@ class Bzip2Handler(ArchiveHandler):
     @property
     def supports_encryption(self):
         return False
+
+    def create_archive(self, filename):
+        return
     
+    def add_files(self, archive_filename, files_to_add):
+        return
+    
+    @property
+    def supports_creation(self):
+        return False
+
+    @property
+    def supports_adding(self):
+        return False
+        
 # Dictionary to map file extensions to their respective handlers
 ARCHIVE_HANDLERS = {
     '7z': SevenZipHandler(),
