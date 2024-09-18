@@ -8,6 +8,7 @@ import bz2
 from tkinter import messagebox
 import threading
 from archive_base import ArchiveHandler
+import keyring
 
 class SevenZipHandler(ArchiveHandler):
     def get_file_list(self, filename):
@@ -80,8 +81,11 @@ class SevenZipHandler(ArchiveHandler):
 class ZipHandler(ArchiveHandler):
     def get_file_list(self, filename):
         with zipfile.ZipFile(filename, 'r') as archive:
-            return archive.namelist()
-
+            return [
+                (os.path.basename(item.filename), item.file_size)
+                for item in archive.infolist()
+            ]
+        
     def extract_files(self, filename, files_to_extract, extract_dir, callback):
         with zipfile.ZipFile(filename, 'r') as archive:
             for i, file in enumerate(files_to_extract, 1):
@@ -223,7 +227,10 @@ class RarHandler(ArchiveHandler):
 class TarHandler(ArchiveHandler):
     def get_file_list(self, filename):
         with tarfile.open(filename, 'r:*') as archive:
-            return archive.getnames()
+            return [
+                (member.name, member.size)
+                for member in archive
+            ]
 
     def extract_files(self, filename, files_to_extract, extract_dir, callback):
         with tarfile.open(filename, 'r:*') as archive:
@@ -389,11 +396,11 @@ def populate_tree(self, filename):
         
         file_list = handler.get_file_list(filename)
         
-        for file_path in file_list:
+        for file_path, file_size in file_list:
             self.tree.insert("", "end", values=(
                 "☐",  # Unchecked box
                 file_path,
-                ""  # Size information not available
+                f"{file_size} bytes"  # Size information
             ))
         
         self.status_var.set(f"Loaded {len(file_list)} files from archive")

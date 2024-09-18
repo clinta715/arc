@@ -5,19 +5,21 @@ import os
 import threading
 
 from ui_components import create_widgets, set_dark_theme
-from archive_handlers import populate_tree, extract_files, get_archive_handler
+from archive_handlers import populate_tree, extract_files, get_archive_handler, ARCHIVE_HANDLERS
 from utils import SUPPORTED_FORMATS
+import keyring
 
 class ArchiveViewer(tk.Tk):
     def __init__(self):
         super().__init__()
 
         self.title("Archive Viewer")
-        self.geometry("600x400")
+        self.geometry("800x500")  # Increased size
 
         self.supported_formats = SUPPORTED_FORMATS
         self.last_extraction_path = os.path.expanduser("~")
         self.archive_filename = None
+        self.password_manager = keyring.get_keyring()
 
         set_dark_theme(self)
         create_widgets(self)
@@ -146,6 +148,7 @@ class ArchiveViewer(tk.Tk):
             password = simpledialog.askstring("Encrypt Archive", "Enter master password for the archive:", show='*')
             if password:
                 try:
+                    self.password_manager.set(self.archive_filename, "master_password", password)
                     handler.encrypt_archive(self.archive_filename, password)
                     messagebox.showinfo("Success", "Archive encrypted successfully.")
                 except Exception as e:
@@ -157,6 +160,7 @@ class ArchiveViewer(tk.Tk):
                 file_name = self.tree.item(item)['values'][1]
                 password = simpledialog.askstring("Encrypt File", f"Enter password for {file_name}:", show='*')
                 if password:
+                    self.password_manager.set(self.archive_filename, file_name, password)
                     files_to_encrypt[file_name] = password
 
             if files_to_encrypt:
@@ -226,4 +230,27 @@ class ArchiveViewer(tk.Tk):
                 populate_tree(self, self.archive_filename)  # Refresh the file list
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to add files: {str(e)}")
-                
+
+    def sort_by_column(self, col, reverse):
+        try:
+            data = [(self.tree.set(item, col), item) for item in self.tree.get_children('')]
+            data.sort(reverse=reverse)
+            for idx, (val, item) in enumerate(data):
+                self.tree.move(item, '', idx)
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to sort: {str(e)}")
+
+    def search_files(self, event=None):
+        search_term = self.search_entry.get()
+        for item in self.tree.get_children():
+            file_name = self.tree.item(item)['values'][1]
+            if search_term.lower() in file_name.lower():
+                self.tree.item(item, open=True)
+            else:
+                self.tree.item(item, open=False)
+
+    def select_extract_directory(self):
+        return filedialog.askdirectory(
+            title="Select Extraction Directory",
+            initialdir=self.last_extraction_path
+        )

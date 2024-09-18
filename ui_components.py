@@ -31,8 +31,16 @@ def set_dark_theme(self):
     self.configure(bg=self.bg_color)
 
 def create_widgets(self):
-    self.select_button = ttk.Button(self, text="Select Archive File", command=self.select_file)
-    self.select_button.pack(pady=10)
+    # Create a frame for the top buttons
+    top_button_frame = ttk.Frame(self)
+    top_button_frame.pack(pady=10)
+
+    # Add 'New Archive' and 'Select Archive' buttons at the top
+    self.new_archive_button = ttk.Button(top_button_frame, text="New Archive", command=self.create_new_archive)
+    self.new_archive_button.pack(side=tk.LEFT, padx=5)
+
+    self.select_button = ttk.Button(top_button_frame, text="Select Archive", command=self.select_file)
+    self.select_button.pack(side=tk.LEFT, padx=5)
 
     self.tree = ttk.Treeview(self, columns=("Extract", "Filename", "Size"), show="headings")
     self.tree.heading("Extract", text="Extract")
@@ -43,11 +51,31 @@ def create_widgets(self):
 
     self.tree.bind("<ButtonRelease-1>", self.on_click)
 
-    # Create a frame to hold the buttons
+    # Create a frame for the search bar
+    search_frame = ttk.Frame(self)
+    search_frame.pack(pady=5)
+
+    self.search_entry = ttk.Entry(search_frame)
+    self.search_entry.pack(side=tk.LEFT)
+
+    self.search_button = ttk.Button(search_frame, text="Search", command=self.search_files)
+    self.search_button.pack(side=tk.LEFT)
+
+    self.tree.bind("<Button-3>", self.show_right_click_menu)
+
+    # Add sorting functionality
+    self.tree.heading("Extract", text="Extract", command=lambda: self.sort_by_column("#1", False))
+    self.tree.heading("Filename", text="Filename", command=lambda: self.sort_by_column("#2", False))
+    self.tree.heading("Size", text="Size", command=lambda: self.sort_by_column("#3", False))
+
+    # Create a frame to hold the action buttons
     button_frame = ttk.Frame(self)
     button_frame.pack(pady=10)
 
-    # Place the Extract, Delete, Rename, and Encrypt buttons side by side
+    # Place all action buttons side by side
+    self.add_button = ttk.Button(button_frame, text="Add Files", command=self.add_files)
+    self.add_button.pack(side=tk.LEFT, padx=5)
+
     self.extract_button = ttk.Button(button_frame, text="Extract Files", command=self.extract_files)
     self.extract_button.pack(side=tk.LEFT, padx=5)
     
@@ -67,3 +95,12 @@ def create_widgets(self):
 
     self.progress_bar = ttk.Progressbar(self, orient=tk.HORIZONTAL, length=100, mode='determinate')
     self.progress_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+
+    # Right-click menu
+    self.right_click_menu = tk.Menu(self, tearoff=0)
+    self.right_click_menu.add_command(label="Delete", command=self.delete_files)
+    self.right_click_menu.add_command(label="Rename", command=self.rename_file)
+    self.right_click_menu.add_command(label="Encrypt", command=self.encrypt_files)
+
+    def show_right_click_menu(self, event):
+        self.right_click_menu.post(event.x_root, event.y_root)
